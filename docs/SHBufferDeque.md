@@ -1,5 +1,5 @@
 # SHBufferDeque
-Stable Heap Buffer Deque
+A Stable Heap Buffer Deque
 
 ## Type `SHBufferDeque`
 ``` motoko no-repl

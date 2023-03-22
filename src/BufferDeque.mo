@@ -1,5 +1,4 @@
 /// A Buffer that with an amortized time of O(1) additions at both ends
-/// The `BufferDeque` class is a wrapper around the `SHBufferDeque` module that provides a more idiomatic interface with methods instead of module functions.
 
 import Array "mo:base/Array";
 import Debug "mo:base/Debug";
@@ -36,8 +35,9 @@ module {
         // Returns the internal index of the element at the perceived index `i`.
         private func get_index(i : Nat) : Nat = (start + i) % capacity();
 
-        // for debugging purposes
+        /// for debugging purposes
         public func internal_array() : [?A] = Array.freeze(elems);
+        public func internal_start() : Nat = start;
 
         /// Retrieves the element at the given index.
         /// Traps if the index is out of bounds.
@@ -140,6 +140,7 @@ module {
 
         /// Removes an element from the end of the buffer and returns it if it exists.
         /// If the buffer is empty, it returns `null`.
+        /// Runtime: `O(1)` amortized
         public func popBack() : ?A {
             if (count == 0) {
                 return null;
@@ -177,6 +178,7 @@ module {
         func subToMinZero(x : Nat, y : Nat) : Nat = if (x > y) x - y else 0;
 
         /// Removes an element at the given index and returns it. Traps if the index is out of bounds.
+        /// Runtime: `O(min(i, size - i))`
         public func remove(i : Nat) : A {
             if (i >= count) {
                 Debug.trap("BufferDeque remove(): Index " # debug_show (i) # " out of bounds");
@@ -214,6 +216,8 @@ module {
             elem;
         };
 
+        /// Removes a range of elements from the buffer and returns them as an array.
+        /// Traps if the range is out of bounds.
         public func removeRange(_start : Nat, end : Nat) : [A] {
             if (_start > end) {
                 Debug.trap("BufferDeque removeRange(): start " # debug_show (_start) # " > end " # debug_show (end));
@@ -294,6 +298,13 @@ module {
             );
         };
 
+        func swap_unchecked(i : Nat, j : Nat) {
+            let tmp = elems[i];
+            elems[i] := elems[j];
+            elems[j] := tmp;
+        };
+        
+        /// Swaps the elements at the given indices.
         public func swap(i : Nat, j : Nat) {
             if (i >= count) {
                 Debug.trap("BufferDeque swap(): Index " # debug_show (i) # " out of bounds");
@@ -303,11 +314,11 @@ module {
                 Debug.trap("BufferDeque swap(): Index " # debug_show (j) # " out of bounds");
             };
 
-            let tmp = get((i));
-            put(i, get(j));
-            put(j, tmp);
+            swap_unchecked(get_index(i), get_index(j));
         };
 
+        /// Rotates the buffer to the left by the given amount.
+        /// Runtime: `O(min(n, size - n))`
         public func rotateLeft(n : Nat) {
             let rotate_n = n % count;
 
@@ -324,24 +335,28 @@ module {
 
             if (shift_from_end) {
                 var dist = 0;
-
                 while (dist < (count - rotate_n : Nat)) {
                     let curr = rotate_n + dist;
-                    let next = (curr + rotate_n) % count;
-                    swap(curr, next);
+                    let next = (curr + count) % capacity();
+                    let i = get_index(curr);
+                    let j = get_index(next);
+
+                    swap_unchecked(i, j);
                     dist += 1;
                 };
 
-                start := get_index((count - rotate_n) : Nat);
+                start := get_index((capacity() - (count - rotate_n)) : Nat);
 
             } else {
                 var dist = 0;
 
                 while (dist < rotate_n) {
                     let curr = dist;
-                    let next = (curr + rotate_n) % count;
+                    let next = (curr + count) % capacity();
+                    let i = get_index(curr);
+                    let j = get_index(next);
 
-                    swap(curr, next);
+                    swap_unchecked(i, j);
                     dist += 1;
                 };
 
@@ -349,8 +364,11 @@ module {
             };
         };
 
+        /// Rotates the buffer to the right by the given amount.
+        /// Runtime: `O(min(n, size - n))`
         public func rotateRight(n : Nat) = rotateLeft(count - (n % count));
 
+        /// Returns an iterator over the elements of the buffer.
         public func vals() : Iter.Iter<A> {
             Iter.map(
                 Iter.range(start, count - 1),
@@ -359,10 +377,12 @@ module {
         };
     };
 
+    /// Creates an empty buffer.
     public func new<A>() : BufferDeque<A> {
-        BufferDeque<A>(DEFAULT_CAPACITY);
+        BufferDeque<A>(0);
     };
 
+    /// Creates a buffer with the given capacity and initializes all elements to the given value.
     public func init<A>(capacity : Nat, val : A) : BufferDeque<A> {
         let buffer = BufferDeque<A>(capacity);
 
@@ -373,6 +393,7 @@ module {
         buffer;
     };
 
+    /// Creates a buffer with the given capacity and initializes all elements using the given function.
     public func tabulate<A>(capacity : Nat, f : Nat -> A) : BufferDeque<A> {
         let buffer = BufferDeque<A>(capacity);
 
@@ -383,18 +404,22 @@ module {
         buffer;
     };
 
+    /// Returns the element at the front of the buffer, or `null` if the buffer is empty.
     public func peekFront<A>(buffer : BufferDeque<A>) : ?A {
         buffer.getOpt(0);
     };
 
+    /// Returns the element at the back of the buffer, or `null` if the buffer is empty.
     public func peekBack<A>(buffer : BufferDeque<A>) : ?A {
         buffer.getOpt(buffer.size() - 1);
     };
 
+    /// Checks if the buffer is empty.
     public func isEmpty<A>(buffer : BufferDeque<A>) : Bool {
         buffer.size() == 0;
     };
 
+    /// Creates a buffer from the given array.
     public func fromArray<A>(arr : [A]) : BufferDeque<A> {
         let buffer = BufferDeque<A>(arr.size());
 
@@ -405,6 +430,7 @@ module {
         buffer;
     };
 
+    /// Returns the buffer as an array.
     public func toArray<A>(buffer : BufferDeque<A>) : [A] {
         Array.tabulate(buffer.size(), func(i : Nat) : A = buffer.get(i));
     };

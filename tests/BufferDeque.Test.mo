@@ -11,7 +11,7 @@ suite("BufferDeque", func() {
 	test("Add 3 items to the end of the buffer", func() {
 		let buffer = BufferDeque.new<Nat>();
                     
-        assert buffer.capacity() == 10;
+        assert buffer.capacity() == 0;
         assert buffer.size() == 0;
         assert BufferDeque.isEmpty(buffer);
         
@@ -19,7 +19,6 @@ suite("BufferDeque", func() {
         buffer.addBack(2);
         buffer.addBack(3);
 
-        assert buffer.capacity() == 10;
         assert buffer.size() == 3;
         assert not BufferDeque.isEmpty(buffer);
 
@@ -33,7 +32,7 @@ suite("BufferDeque", func() {
 	});
 
     test("Add 3 items to the front of the buffer", func() {
-		let buffer = BufferDeque.new<Nat>();
+		let buffer = BufferDeque.BufferDeque<Nat>(10);
                     
         assert buffer.capacity() == 10;
         assert buffer.size() == 0;
@@ -152,25 +151,12 @@ suite("BufferDeque", func() {
     test("rotate buffer with filled capacity", func(){
         let buffer = BufferDeque.fromArray<Nat>([1, 2, 3, 4, 5]);
 
+        assert buffer.capacity() == 5;
+        
         buffer.rotateLeft(1);
         assert BufferDeque.toArray(buffer) == [2, 3, 4, 5, 1];
 
         buffer.rotateLeft(2);
-        assert BufferDeque.toArray(buffer) == [4, 5, 1, 2, 3];
-
-        buffer.rotateLeft(3);
-        assert BufferDeque.toArray(buffer) == [2, 3, 4, 5, 1];
-
-        buffer.rotateLeft(4);
-        assert BufferDeque.toArray(buffer) == [1, 2, 3, 4, 5];
-
-        buffer.rotateRight(5);
-        assert BufferDeque.toArray(buffer) == [1, 2, 3, 4, 5];
-
-        buffer.rotateRight(4);
-        assert BufferDeque.toArray(buffer) == [2, 3, 4, 5, 1];
-
-        buffer.rotateRight(3);
         assert BufferDeque.toArray(buffer) == [4, 5, 1, 2, 3];
 
         buffer.rotateRight(2);
@@ -178,17 +164,30 @@ suite("BufferDeque", func() {
 
         buffer.rotateRight(1);
         assert BufferDeque.toArray(buffer) == [1, 2, 3, 4, 5];
+
+        buffer.rotateRight(5);
+        assert BufferDeque.toArray(buffer) == [1, 2, 3, 4, 5];
     });
 
     test("rotate sparse buffer", func(){
         let buffer = BufferDeque.fromArray<Nat>([1, 2, 3, 4, 5]);
-
         buffer.reserve(10);
 
-        buffer.rotateLeft(1);
-        Debug.print(debug_show buffer.internal_array());
-        Debug.print(debug_show BufferDeque.toArray(buffer));
-        assert BufferDeque.toArray(buffer) == [4, 5, 3, 4, 5];
+        assert buffer.capacity() == 10;
 
+        buffer.rotateLeft(1);
+        assert BufferDeque.toArray(buffer) == [2, 3, 4, 5, 1];
+
+        buffer.rotateLeft(2);
+        assert BufferDeque.toArray(buffer) == [4, 5, 1, 2, 3];
+
+        buffer.rotateRight(1);
+        assert BufferDeque.toArray(buffer) == [3, 4, 5, 1, 2];
+
+        buffer.rotateRight(2);
+        assert BufferDeque.toArray(buffer) == [1, 2, 3, 4, 5];
+
+        buffer.rotateRight(15);
+        assert BufferDeque.toArray(buffer) == [1, 2, 3, 4, 5];
     });
 });
