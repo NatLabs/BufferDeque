@@ -371,7 +371,7 @@ module {
         /// Returns an iterator over the elements of the buffer.
         public func vals() : Iter.Iter<A> {
             Iter.map(
-                Iter.range(start, count - 1),
+                Iter.range(0, count - 1),
                 func(i : Nat) : A = get(i),
             );
         };

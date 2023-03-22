@@ -10,7 +10,7 @@ import BufferDeque "../src/BufferDeque";
 suite("BufferDeque", func() {
 	test("Add 3 items to the end of the buffer", func() {
 		let buffer = BufferDeque.new<Nat>();
-                    
+
         assert buffer.capacity() == 0;
         assert buffer.size() == 0;
         assert BufferDeque.isEmpty(buffer);
@@ -53,6 +53,7 @@ suite("BufferDeque", func() {
         assert BufferDeque.peekFront(buffer) == ?3;
         assert BufferDeque.peekBack(buffer) == ?1;
         assert BufferDeque.toArray(buffer) == [3, 2, 1];
+        assert Iter.toArray(buffer.vals()) == [3, 2, 1];
 	});
 
     test("init fromArray()", func(){
@@ -62,6 +63,7 @@ suite("BufferDeque", func() {
         assert buffer.size() == 5;
 
         assert BufferDeque.toArray(buffer) == [1, 2, 3, 4, 5];
+        assert Iter.toArray(buffer.vals()) == [1, 2, 3, 4, 5];
     });
 
     test("replace items in of the buffer", func() {
@@ -71,6 +73,7 @@ suite("BufferDeque", func() {
         buffer.put(3, 20);
 
         assert BufferDeque.toArray(buffer) == [1, 10, 3, 20, 5];
+        assert Iter.toArray(buffer.vals()) == [1, 10, 3, 20, 5];
     });
 
     test("remove items from the ends of the buffer", func() {
@@ -114,6 +117,7 @@ suite("BufferDeque", func() {
         assert buffer.size() == 9;
 
         assert BufferDeque.toArray(buffer) == [7, 8, 9, 4, 5, 6, 1, 2, 3];
+        assert Iter.toArray(buffer.vals()) == [7, 8, 9, 4, 5, 6, 1, 2, 3];
     });
 
     test("remove item from buffer", func(){
@@ -132,6 +136,7 @@ suite("BufferDeque", func() {
         assert buffer.size() == 1;
 
         assert BufferDeque.toArray(buffer) == [4];
+        assert Iter.toArray(buffer.vals()) == [4];
     });
 
     test("remove a range of items from the buffer", func(){
