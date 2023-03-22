@@ -1,4 +1,4 @@
-/// Stable Heap Buffer Deque
+/// A Stable Heap Buffer Deque
 
 import Array "mo:base/Array";
 import Debug "mo:base/Debug";

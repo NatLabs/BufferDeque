@@ -1,4 +1,5 @@
 /// A Buffer that with an amortized time of O(1) additions at both ends
+/// The `BufferDeque` class is a wrapper around the `SHBufferDeque` module that provides a more idiomatic interface with methods instead of module functions.
 
 import Array "mo:base/Array";
 import Debug "mo:base/Debug";
@@ -20,6 +21,7 @@ module {
     type BufferInterface<A> = Common.BufferInterface<A>;
 
     public class BufferDeque<A>(init_capacity : Nat) {
+
         var start = 0;
         var count = 0;
 
@@ -33,6 +35,9 @@ module {
 
         // Returns the internal index of the element at the perceived index `i`.
         private func get_index(i : Nat) : Nat = (start + i) % capacity();
+
+        // for debugging purposes
+        public func internal_array() : [?A] = Array.freeze(elems);
 
         /// Retrieves the element at the given index.
         /// Traps if the index is out of bounds.
@@ -99,7 +104,7 @@ module {
         };
 
         /// Adds an element to the start of the buffer.
-        public func pushFront(elem : A) {
+        public func addFront(elem : A) {
             if (count == capacity()) {
                 reserve(newCapacity(capacity()));
             };
@@ -110,7 +115,7 @@ module {
         };
 
         /// Adds an element to the end of the buffer
-        public func pushBack(elem : A) {
+        public func addBack(elem : A) {
             if (count == capacity()) {
                 reserve(newCapacity(capacity()));
             };
@@ -133,6 +138,8 @@ module {
             return elem;
         };
 
+        /// Removes an element from the end of the buffer and returns it if it exists.
+        /// If the buffer is empty, it returns `null`.
         public func popBack() : ?A {
             if (count == 0) {
                 return null;
@@ -144,6 +151,7 @@ module {
             return elem;
         };
 
+        /// Removes all elements from the buffer and resizes it to the default capacity.
         public func clear() {
             start := 0;
             count := 0;
@@ -152,43 +160,53 @@ module {
 
         /// Adds all the elements in the given buffer to the end of this buffer.
         /// The `BufferInterface<A>` type is used to allow for any type that has a `size` and `get` method.
-        public func append(other: BufferInterface<A>) {
+        public func append(other : BufferInterface<A>) {
             for (elem in Iter.range(0, other.size() - 1)) {
-                pushBack(other.get(elem));
+                addBack(other.get(elem));
             };
         };
 
-        public func remove(i: Nat): A {
+        /// Adds all the elements in the given buffer to the start of this buffer.
+        public func prepend(other : BufferInterface<A>) {
+            for (i in Iter.range(0, other.size() - 1)) {
+                let end_index = (other.size() - i - 1) : Nat;
+                addFront(other.get(end_index));
+            };
+        };
+
+        func subToMinZero(x : Nat, y : Nat) : Nat = if (x > y) x - y else 0;
+
+        /// Removes an element at the given index and returns it. Traps if the index is out of bounds.
+        public func remove(i : Nat) : A {
             if (i >= count) {
                 Debug.trap("BufferDeque remove(): Index " # debug_show (i) # " out of bounds");
             };
 
-            let index = get_index(i);
-            let elem = get(index);
+            let elem = get(i);
 
-            let shift_left = i > count / 2;
+            let shift_left = i >= (count / 2);
 
-            let iter = if (shift_left) {
-                Iter.map<Nat, (Nat, Nat)>(
-                    Iter.range(i + 2, count),
-                    func(i : Nat) : (Nat, Nat) {
-                        (get_index(i - 2), get_index(i - 1));
-                    },
-                );
+            if (shift_left) {
+                var dist = 0;
+
+                while (dist < (count - i - 1 : Nat)) {
+                    let j = dist + i;
+                    elems[get_index(j)] := elems[get_index(j + 1)];
+                    dist += 1;
+                };
+
+                elems[get_index(count - 1)] := null;
+
             } else {
-                Iter.map<Nat, (Nat, Nat)>(
-                    Iter.range(1, i),
-                    func(i : Nat) : (Nat, Nat) {
-                        (get_index(i - 1), get_index(i));
-                    },
-                );
-            };
+                var dist = 0;
 
-            for ((i, j) in iter) {
-                elems[j] := elems[i];
-            };
+                while (dist < i) {
+                    let j = (i - dist) : Nat;
+                    elems[get_index(j)] := elems[get_index(j - 1)];
+                    dist += 1;
+                };
 
-            if (index == start or not shift_left) {
+                elems[start] := null;
                 start := get_index(1);
             };
 
@@ -196,25 +214,142 @@ module {
             elem;
         };
 
-        public func insertBuffer<A>(i: Nat, other: BufferInterface<A>){
-            
+        public func removeRange(_start : Nat, end : Nat) : [A] {
+            if (_start > end) {
+                Debug.trap("BufferDeque removeRange(): start " # debug_show (_start) # " > end " # debug_show (end));
+            };
+
+            if (end > count) {
+                Debug.trap("BufferDeque removeRange(): end " # debug_show (end) # " > count " # debug_show (count));
+            };
+
+            let remove_size = (end - _start) : Nat;
+
+            let items = Array.tabulate(
+                remove_size,
+                func(i : Nat) : A {
+                    let j = _start + i;
+                    let val = get(j);
+                    elems[get_index(j)] := null;
+                    val;
+                },
+            );
+
+            let shift_from_end = (count - end) : Nat <= _start;
+
+            if (shift_from_end) {
+                var dist = 0;
+
+                while (dist < (count - end : Nat)) {
+                    let curr = dist + end;
+                    let next = (curr - remove_size) : Nat;
+
+                    elems[get_index(next)] := elems[get_index(curr)];
+                    elems[get_index(curr)] := null;
+                    dist += 1;
+                };
+            } else {
+
+                var dist = 0;
+
+                while (dist < _start) {
+                    let curr = (_start - dist - 1) : Nat;
+                    let next = curr + remove_size;
+
+                    elems[get_index(next)] := elems[get_index(curr)];
+                    elems[get_index(curr)] := null;
+
+                    dist += 1;
+                };
+
+                start := get_index(remove_size);
+
+            };
+
+            count -= remove_size;
+
+            items;
         };
 
         /// Returns an iterator over the elements of the buffer.
-        ///
         /// Note: The values in the iterator will change if the buffer is modified before the iterator is consumed.
         public func range(start : Nat, end : Nat) : Iter.Iter<A> {
+            if (start > end) {
+                Debug.trap("BufferDeque range(): start " # debug_show (start) # " > end " # debug_show (end));
+            };
+
+            if (end > count) {
+                Debug.trap("BufferDeque range(): end " # debug_show (end) # " > count " # debug_show (count));
+            };
+
+            let len = (end - start) : Nat;
+
+            if (len == 0) {
+                return [].vals();
+            };
+
             Iter.map(
                 Iter.range(start, end - 1),
                 func(i : Nat) : A = get(i),
             );
         };
 
-        public func drain(start : Nat, end : Nat) : Iter.Iter<A> {
-            let iter = range(start, end);
-            clear();
-            iter;
+        public func swap(i : Nat, j : Nat) {
+            if (i >= count) {
+                Debug.trap("BufferDeque swap(): Index " # debug_show (i) # " out of bounds");
+            };
+
+            if (j >= count) {
+                Debug.trap("BufferDeque swap(): Index " # debug_show (j) # " out of bounds");
+            };
+
+            let tmp = get((i));
+            put(i, get(j));
+            put(j, tmp);
         };
+
+        public func rotateLeft(n : Nat) {
+            let rotate_n = n % count;
+
+            if (rotate_n == 0) {
+                return;
+            };
+
+            if (size() == capacity()) {
+                start := get_index(rotate_n);
+                return;
+            };
+
+            let shift_from_end = (count - rotate_n) : Nat <= rotate_n;
+
+            if (shift_from_end) {
+                var dist = 0;
+
+                while (dist < (count - rotate_n : Nat)) {
+                    let curr = rotate_n + dist;
+                    let next = (curr + rotate_n) % count;
+                    swap(curr, next);
+                    dist += 1;
+                };
+
+                start := get_index((count - rotate_n) : Nat);
+
+            } else {
+                var dist = 0;
+
+                while (dist < rotate_n) {
+                    let curr = dist;
+                    let next = (curr + rotate_n) % count;
+
+                    swap(curr, next);
+                    dist += 1;
+                };
+
+                start := get_index(rotate_n);
+            };
+        };
+
+        public func rotateRight(n : Nat) = rotateLeft(count - (n % count));
 
         public func vals() : Iter.Iter<A> {
             Iter.map(
@@ -232,7 +367,7 @@ module {
         let buffer = BufferDeque<A>(capacity);
 
         for (i in Iter.range(0, capacity - 1)) {
-            buffer.pushBack(val);
+            buffer.addBack(val);
         };
 
         buffer;
@@ -242,7 +377,7 @@ module {
         let buffer = BufferDeque<A>(capacity);
 
         for (i in Iter.range(0, capacity - 1)) {
-            buffer.pushBack(f(i));
+            buffer.addBack(f(i));
         };
 
         buffer;
@@ -254,5 +389,23 @@ module {
 
     public func peekBack<A>(buffer : BufferDeque<A>) : ?A {
         buffer.getOpt(buffer.size() - 1);
+    };
+
+    public func isEmpty<A>(buffer : BufferDeque<A>) : Bool {
+        buffer.size() == 0;
+    };
+
+    public func fromArray<A>(arr : [A]) : BufferDeque<A> {
+        let buffer = BufferDeque<A>(arr.size());
+
+        for (i in Iter.range(0, arr.size() - 1)) {
+            buffer.addBack(arr[i]);
+        };
+
+        buffer;
+    };
+
+    public func toArray<A>(buffer : BufferDeque<A>) : [A] {
+        Array.tabulate(buffer.size(), func(i : Nat) : A = buffer.get(i));
     };
 };
