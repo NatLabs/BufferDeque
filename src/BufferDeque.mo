@@ -162,15 +162,15 @@ module {
         /// Adds all the elements in the given buffer to the end of this buffer.
         /// The `BufferInterface<A>` type is used to allow for any type that has a `size` and `get` method.
         public func append(other : BufferInterface<A>) {
-            for (elem in Iter.range(0, other.size() - 1)) {
-                addBack(other.get(elem));
+            for (i in Iter.range(1, other.size())) {
+                addBack(other.get(i - 1));
             };
         };
 
         /// Adds all the elements in the given buffer to the start of this buffer.
         public func prepend(other : BufferInterface<A>) {
-            for (i in Iter.range(0, other.size() - 1)) {
-                let end_index = (other.size() - i - 1) : Nat;
+            for (i in Iter.range(1, other.size())) {
+                let end_index = (other.size() - i) : Nat;
                 addFront(other.get(end_index));
             };
         };
@@ -303,7 +303,7 @@ module {
             elems[i] := elems[j];
             elems[j] := tmp;
         };
-        
+
         /// Swaps the elements at the given indices.
         public func swap(i : Nat, j : Nat) {
             if (i >= count) {
@@ -371,8 +371,8 @@ module {
         /// Returns an iterator over the elements of the buffer.
         public func vals() : Iter.Iter<A> {
             Iter.map(
-                Iter.range(0, count - 1),
-                func(i : Nat) : A = get(i),
+                Iter.range(1, count),
+                func(i : Nat) : A = get(i - 1),
             );
         };
     };
@@ -386,7 +386,7 @@ module {
     public func init<A>(capacity : Nat, val : A) : BufferDeque<A> {
         let buffer = BufferDeque<A>(capacity);
 
-        for (i in Iter.range(0, capacity - 1)) {
+        for (_ in Iter.range(1, capacity)) {
             buffer.addBack(val);
         };
 
@@ -397,8 +397,8 @@ module {
     public func tabulate<A>(capacity : Nat, f : Nat -> A) : BufferDeque<A> {
         let buffer = BufferDeque<A>(capacity);
 
-        for (i in Iter.range(0, capacity - 1)) {
-            buffer.addBack(f(i));
+        for (i in Iter.range(1, capacity)) {
+            buffer.addBack(f(i - 1));
         };
 
         buffer;
@@ -411,7 +411,10 @@ module {
 
     /// Returns the element at the back of the buffer, or `null` if the buffer is empty.
     public func peekBack<A>(buffer : BufferDeque<A>) : ?A {
-        buffer.getOpt(buffer.size() - 1);
+        let size = buffer.size();
+        if (size == 0) { return null };
+
+        buffer.getOpt(size - 1);
     };
 
     /// Checks if the buffer is empty.
@@ -423,8 +426,8 @@ module {
     public func fromArray<A>(arr : [A]) : BufferDeque<A> {
         let buffer = BufferDeque<A>(arr.size());
 
-        for (i in Iter.range(0, arr.size() - 1)) {
-            buffer.addBack(arr[i]);
+        for (i in Iter.range(1, arr.size())) {
+            buffer.addBack(arr[i - 1]);
         };
 
         buffer;
