@@ -85,7 +85,7 @@ module {
         ///
         /// Space: O(capacity)
         ///
-        /// > Adapted from the base implementation of the `Buffer` class
+        /// > *Adapted from the base implementation of the `Buffer` class*
         public func reserve(capacity : Nat) {
             if (capacity < count) {
                 Debug.trap "capacity must be >= size in reserve";

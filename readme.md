@@ -1,8 +1,6 @@
 ## BufferDeque
 A Buffer with the functionality of a Deque for efficient insertion and deletion at both ends.
 
-> Note: The Stable Heap class ([SHBufferDeque](./src//SHBufferDeque.mo)) has not been fully implemented yet.
-
 ## Installation
 Install the package with [mops](https://mops.one/):
 ```bash
